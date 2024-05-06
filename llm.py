@@ -26,9 +26,11 @@ DEFAULT_MODEL = LLAMA3_70B
 prev_git_url = ""
 
 
-def setup_groq_client(model_name=DEFAULT_MODEL):
+def setup_groq_client(groq_api_key, model_name=DEFAULT_MODEL):
     global groq_client
-    groq_client = ChatGroq(temperature=0, model_name=model_name)
+    groq_client = ChatGroq(temperature=0,
+                           model_name=model_name,
+                           groq_api_key=groq_api_key)
 
 
 def load_split_vector(urls: List[str],
