@@ -7,8 +7,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import WebBaseLoader, GitLoader
 from langchain.chains import (
     create_history_aware_retriever,
-    create_retrieval_chain,
-    ConversationalRetrievalChain
+    create_retrieval_chain
 )
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -18,6 +17,7 @@ from langchain import hub
 from typing import List, Dict
 
 groq_client = None
+hf_embeddings = None
 LLAMA3_70B = "llama3-70b-8192"
 LLAMA3_8B = "llama3-8b-8192"
 GEMMA_7B_IT = "gemma-7b-it"
@@ -31,8 +31,10 @@ def setup_groq_client(model_name=DEFAULT_MODEL):
     groq_client = ChatGroq(temperature=0, model_name=model_name)
 
 
-def load_split_vector(urls: List[str], doc_type="general", file_filter=""):
-    global prev_git_url
+def load_split_vector(urls: List[str],
+                      doc_type="general",
+                      file_filter=""):
+    global prev_git_url, hf_embeddings
     # Step 1: Load the document from a web url
     if doc_type == "git":
         if os.path.isdir("temp_path") and prev_git_url != urls[0]:
@@ -54,13 +56,15 @@ def load_split_vector(urls: List[str], doc_type="general", file_filter=""):
     all_splits = text_splitter.split_documents(documents)
 
     # Step 3: Store the document into a vector store with a specific embedding model
-    vectorStore = FAISS.from_documents(all_splits,
-                                       HuggingFaceEmbeddings(
-                                           model_name="sentence-transformers/all-mpnet-base-v2"))
+    if not hf_embeddings:
+        hf_embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
+    vectorStore = FAISS.from_documents(all_splits, hf_embeddings)
     return vectorStore.as_retriever(search_kwargs={'k': top_k})
 
 
-def generate_llm_response(chat_history, doc=True, vectorStoreRetriever=None):
+def generate_llm_response(chat_history,
+                          doc=True,
+                          vectorStoreRetriever=None):
     global groq_client
     if doc:
         # Contextualize question
@@ -124,5 +128,4 @@ def groq_chat_completion(urls: List[str],
                                          vectorStoreRetriever)
     else:
         response = generate_llm_response(chat_history, False)
-
     return response

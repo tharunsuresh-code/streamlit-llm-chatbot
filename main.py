@@ -5,16 +5,18 @@ import time
 
 
 # Streamlit app title
-st.title("LLAMA3 Chatbot")
+st.title("RAG Chatbot")
 
 backend_LLM = LLAMA3_70B
 file_filter = None
+
 
 def setup_groq_with_backend():
     if not os.environ["GROQ_API_KEY"].startswith('gsk_'):
         st.warning('Please enter your Groq API key!', icon='⚠')
     else:
         setup_groq_client(backend_LLM)
+
 
 os.environ["GROQ_API_KEY"] = st.sidebar.text_input('Groq API Key', 
                                                    type='password')
@@ -67,15 +69,15 @@ if prompt := st.chat_input("What is up?"):
     urls = []
     if external_url_source:
         urls = external_url_source.split(",")
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            llm_response = response_generator(
-                urls=urls,
-                doc_type=doc_type,
-                session_messages=st.session_state.messages,
-                file_filter=file_filter
-            )
-            response = st.write_stream(llm_response)
+    assistant_message = st.chat_message("assistant")
+    with st.spinner("Thinking..."):
+        llm_response = response_generator(
+            urls=urls,
+            doc_type=doc_type,
+            session_messages=st.session_state.messages,
+            file_filter=file_filter
+        )
+        response = assistant_message.write_stream(llm_response)
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant",
                                       "content": response})
