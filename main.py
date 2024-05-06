@@ -27,9 +27,10 @@ def setup_groq_with_backend():
 
 st.sidebar.text("❤️ Built with love by Tharun Suresh")
 
-GROQ_API_KEY = st.sidebar.text_input('Groq API Key', 
-                                                   type='password')
-backend_LLM = st.sidebar.selectbox("LLM", options=(LLAMA3_70B, LLAMA3_8B, GEMMA_7B_IT),
+GROQ_API_KEY = st.sidebar.text_input('Groq API Key',
+                                     type='password')
+backend_LLM = st.sidebar.selectbox("LLM", 
+                                   options=(LLAMA3_70B, LLAMA3_8B, GEMMA_7B_IT),
                                    on_change=setup_groq_with_backend())
 doc_type = st.sidebar.selectbox("Doc Type", options=("general", "git"))
 external_url_source = st.sidebar.text_input('Enter External Source URL:',
@@ -72,7 +73,7 @@ for message in st.session_state.messages:
 
 # Accept user input
 if prompt := st.chat_input("What is up?"):
-    if GROQ_API_KEY:
+    if not GROQ_API_KEY or not GROQ_API_KEY.startswith('gsk_'):
         # Display user message in chat message container
         with st.chat_message("user"):
             st.markdown(prompt)
