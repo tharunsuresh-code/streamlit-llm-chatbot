@@ -23,7 +23,8 @@ LLAMA3_8B = "llama3-8b-8192"
 GEMMA_7B_IT = "gemma-7b-it"
 
 DEFAULT_MODEL = LLAMA3_70B
-prev_git_url = ""
+prev_git_urls = []
+vectorStoreRetriever = None
 
 
 def setup_groq_client(groq_api_key, model_name=DEFAULT_MODEL):
@@ -36,19 +37,23 @@ def setup_groq_client(groq_api_key, model_name=DEFAULT_MODEL):
 def load_split_vector(urls: List[str],
                       doc_type="general",
                       file_filter=""):
-    global prev_git_url, hf_embeddings
+    global prev_git_urls, hf_embeddings, vectorStoreRetriever
     # Step 1: Load the document from a web url
     if doc_type == "git":
-        if os.path.isdir("temp_path") and prev_git_url != urls[0]:
+        if os.path.isdir("temp_path") and prev_git_urls[0] != urls[0]:
             shutil.rmtree('temp_path')
-        prev_git_url = urls[0]
+        prev_git_urls = urls
         loader = GitLoader(clone_url=urls[0],
                            repo_path="temp_path",
                            file_filter=lambda file_path: file_filter in file_path)
         top_k = 20
     else:
-        loader = WebBaseLoader(urls)
-        top_k = 20
+        if prev_git_urls != urls:
+            loader = WebBaseLoader(urls)
+            prev_git_urls = urls
+            top_k = 20
+        else:
+            return vectorStoreRetriever
     
     documents = loader.load()
 
@@ -61,7 +66,8 @@ def load_split_vector(urls: List[str],
     if not hf_embeddings:
         hf_embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
     vectorStore = FAISS.from_documents(all_splits, hf_embeddings)
-    return vectorStore.as_retriever(search_kwargs={'k': top_k})
+    vectorStoreRetriever = vectorStore.as_retriever(search_kwargs={'k': top_k})
+    return vectorStoreRetriever
 
 
 def generate_llm_response(chat_history,
