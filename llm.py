@@ -1,85 +1,128 @@
 import os
+import shutil
 from groq import Groq
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import WebBaseLoader
-from langchain.chains import ConversationalRetrievalChain
+from langchain_community.document_loaders import WebBaseLoader, GitLoader
+from langchain.chains import (
+    create_history_aware_retriever,
+    create_retrieval_chain,
+    ConversationalRetrievalChain
+)
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_groq import ChatGroq
+from langchain import hub
 
 from typing import List, Dict
 
 groq_client = None
 LLAMA3_70B = "llama3-70b-8192"
 LLAMA3_8B = "llama3-8b-8192"
+GEMMA_7B_IT = "gemma-7b-it"
 
 DEFAULT_MODEL = LLAMA3_70B
+prev_git_url = ""
 
 
-def setup_groq_client():
+def setup_groq_client(model_name=DEFAULT_MODEL):
     global groq_client
-    # groq_client = Groq(
-    #     api_key=os.environ.get("GROQ_API_KEY"),
-    # )
-    groq_client = ChatGroq(temperature=0, model_name=DEFAULT_MODEL)
+    groq_client = ChatGroq(temperature=0, model_name=model_name)
 
 
-# def assistant(content: str):
-#     return {"role": "assistant", "content": content}
-
-
-# def user(content: str):
-#     return {"role": "user", "content": content}
-
-
-# def chat_completion(
-#     messages: List[Dict],
-#     model=DEFAULT_MODEL,
-#     temperature: float = 0.6,
-#     top_p: float = 0.9,
-# ) -> str:
-#     response = groq_client.chat.completions.create(
-#         messages=messages,
-#         model=model,
-#         temperature=temperature,
-#         top_p=top_p,
-#     )
-#     return response.choices[0].message.content
-
-
-def load_split_vector(urls: List[str]):
+def load_split_vector(urls: List[str], doc_type="general", file_filter=""):
+    global prev_git_url
     # Step 1: Load the document from a web url
-    loader = WebBaseLoader(urls)
+    if doc_type == "git":
+        if os.path.isdir("temp_path") and prev_git_url != urls[0]:
+            shutil.rmtree('temp_path')
+        prev_git_url = urls[0]
+        loader = GitLoader(clone_url=urls[0],
+                           repo_path="temp_path",
+                           file_filter=lambda file_path: file_filter in file_path)
+        top_k = 20
+    else:
+        loader = WebBaseLoader(urls)
+        top_k = 20
+    
     documents = loader.load()
 
     # Step 2: Split the document into chunks with a specified chunk size
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, 
-                                                   chunk_overlap=0)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500,
+                                                   chunk_overlap=50)
     all_splits = text_splitter.split_documents(documents)
 
     # Step 3: Store the document into a vector store with a specific embedding model
     vectorStore = FAISS.from_documents(all_splits,
                                        HuggingFaceEmbeddings(
                                            model_name="sentence-transformers/all-mpnet-base-v2"))
-    return vectorStore
+    return vectorStore.as_retriever(search_kwargs={'k': top_k})
 
 
-def groq_chat_completion(urls: List[str], 
-                         session_messages: List[tuple],
-                         prompt: str):
-    if len(urls) > 0:
-        vectorStore = load_split_vector(urls)
-        chain = ConversationalRetrievalChain.from_llm(groq_client,
-                                                      vectorStore.as_retriever(),
-                                                      return_source_documents=True)
+def generate_llm_response(chat_history, doc=True, vectorStoreRetriever=None):
+    global groq_client
+    if doc:
+        # Contextualize question
+        contextualize_q_system_prompt = (
+            "Given a chat history and the latest user question "
+            "which might reference context in the chat history, "
+            "formulate a standalone question which can be understood "
+            "without the chat history. Do NOT answer the question, just "
+            "reformulate it if needed and otherwise return it as is."
+        )
+        contextualize_q_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", contextualize_q_system_prompt),
+                MessagesPlaceholder("chat_history"),
+                ("user", "{input}"),
+            ]
+        )
+        history_aware_retriever = create_history_aware_retriever(
+            groq_client, vectorStoreRetriever, contextualize_q_prompt
+        )
+
+        # Answer question
+        qa_system_prompt = (
+            "You are an assistant for question-answering tasks. Use "
+            "the following pieces of retrieved context to answer the "
+            "question. If you don't know the answer, just say that you "
+            "don't know."
+            "{context}"
+        )
+        qa_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", qa_system_prompt),
+                MessagesPlaceholder("chat_history"),
+                ("user", "{input}"),
+            ]
+        )
+        # Below we use create_stuff_documents_chain to feed all retrieved context
+        # into the LLM. Note that we can also use StuffDocumentsChain and other
+        # instances of BaseCombineDocumentsChain.
+        question_answer_chain = create_stuff_documents_chain(groq_client,
+                                                             qa_prompt)
+        rag_chain = create_retrieval_chain(
+            history_aware_retriever, question_answer_chain
+        )
+        response = rag_chain.invoke({"input": chat_history[-1]["content"],
+                                     "chat_history": chat_history})
+        return response['answer']
     else:
-        chain = ConversationalRetrievalChain.from_llm(groq_client,
-                                                      return_source_documents=True)
+        return groq_client.invoke(chat_history).content
 
-    chat_history = []
-    for i in range(0, len(session_messages)-1, 2):
-        chat_history.append((f"User: {session_messages[i]['content']}", 
-                             f"Assistant: {session_messages[i+1]['content']}"))
-    print(chat_history)
-    result = chain.invoke({"question": prompt, "chat_history": chat_history})
-    return result['answer']
+
+def groq_chat_completion(urls: List[str],
+                         session_messages: List[tuple],
+                         doc_type: str = "general",
+                         file_filter=""):
+    chat_history = session_messages
+    if len(urls) > 0:
+        vectorStoreRetriever = load_split_vector(urls, doc_type, file_filter)
+        response = generate_llm_response(chat_history,
+                                         True, 
+                                         vectorStoreRetriever)
+    else:
+        response = generate_llm_response(chat_history, False)
+
+    return response
