@@ -6,12 +6,12 @@ import time
 
 
 st.set_page_config(
-        page_title="RAG Chatbot - Tharun Suresh",
+        page_title="RAG Chatbot",
 )
 
 
 # Streamlit app title
-st.title("RAG Chatbot")
+st.title("RagyBot - A RAG based chatbot")
 
 backend_LLM = LLAMA3_70B
 file_filter = None
@@ -23,6 +23,8 @@ def setup_groq_with_backend():
     else:
         setup_groq_client(backend_LLM)
 
+
+st.sidebar.text("❤️ Built with love by Tharun Suresh")
 
 os.environ["GROQ_API_KEY"] = st.sidebar.text_input('Groq API Key', 
                                                    type='password')
