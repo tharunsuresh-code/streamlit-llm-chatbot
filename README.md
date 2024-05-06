@@ -13,6 +13,8 @@ What can be done?
 2. Input any website, and query/chat based on questions from the website and LLM's knowledge.
 3. Input a Git repository, and query/chat based on the files in the repository.
 
+App on Streamlit - [streamlit-llm-chatbot](https://groq-llm-langchain-chatbot.streamlit.app/)
+
 ## Setup instructions
 Create a virtual environment to install from requirements file. You need Python 3.10 or higher.
 
