@@ -1,7 +1,13 @@
 import streamlit as st
 import os
-from llm import setup_groq_client, groq_chat_completion, LLAMA3_70B, LLAMA3_8B, GEMMA_7B_IT
+from llm import (setup_groq_client, groq_chat_completion,
+                 LLAMA3_70B, LLAMA3_8B, GEMMA_7B_IT)
 import time
+
+
+st.set_page_config(
+        page_title="RAG Chatbot - Tharun Suresh",
+)
 
 
 # Streamlit app title
