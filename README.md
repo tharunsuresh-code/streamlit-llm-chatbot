@@ -37,4 +37,4 @@ The available **LLM backends** as supported by Groq are as follows:
 **Embeddings**: Supports Hugging Face Embeddings by default, which is now hardcoded to "sentence-transformers/all-mpnet-base-v2". Can be dynamic in the future.
 
 ## Credits
-A big shoutout to all the detailed documentations from [Langchain](https://python.langchain.com/docs/get_started/introduction) and [Streamlit](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps) to help build the app. Groq has been generous with their rate limits for the LLMs which enabled the development of the app. Thanks to [pip-chill](https://github.com/rbanffy/pip-chill) for a chill pip freeze. 
+A big shoutout to all the detailed documentations from [Langchain](https://python.langchain.com/docs/get_started/introduction) and [Streamlit](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps) to help build the app. Groq has been generous with their rate limits for the LLMs which enabled the development of the app. Thanks to [pip-chill](https://github.com/rbanffy/pip-chill) for a chill pip freeze. Used [Loom](https://www.loom.com/) for the demo video of the app.
