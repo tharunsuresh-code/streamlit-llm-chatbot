@@ -49,7 +49,7 @@ if doc_type == "git":
     file_filter = st.sidebar.text_input('File filter:',
                                         placeholder='Enter file type/name to filter the git repo')
     if not file_filter:
-        st.warning('Please filter files to speed the context!', icon='⚠')
+        st.sidebar.text('Note: Please filter files to speed \nthe context!')
 
 
 # Display chat messages from history on app rerun

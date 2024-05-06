@@ -89,7 +89,7 @@ def generate_llm_response(chat_history,
         # Answer question
         qa_system_prompt = (
             "You are an assistant for question-answering tasks. Use "
-            "the following pieces of retrieved context to answer the "
+            "the following pieces of retrieved context/document to answer the "
             "question. If you don't know the answer, just say that you "
             "don't know."
             "{context}"
