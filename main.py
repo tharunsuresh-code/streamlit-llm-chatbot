@@ -73,7 +73,7 @@ for message in st.session_state.messages:
 
 # Accept user input
 if prompt := st.chat_input("What is up?"):
-    if not GROQ_API_KEY or not GROQ_API_KEY.startswith('gsk_'):
+    if GROQ_API_KEY and GROQ_API_KEY.startswith('gsk_'):
         # Display user message in chat message container
         with st.chat_message("user"):
             st.markdown(prompt)
