@@ -120,7 +120,7 @@ def groq_chat_completion(urls: List[str],
     if len(urls) > 0:
         vectorStoreRetriever = load_split_vector(urls, doc_type, file_filter)
         response = generate_llm_response(chat_history,
-                                         True, 
+                                         True,
                                          vectorStoreRetriever)
     else:
         response = generate_llm_response(chat_history, False)

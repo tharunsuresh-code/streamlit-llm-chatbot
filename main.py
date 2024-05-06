@@ -68,13 +68,14 @@ if prompt := st.chat_input("What is up?"):
     if external_url_source:
         urls = external_url_source.split(",")
     with st.chat_message("assistant"):
-        # response = st.write_stream(response_generator())
-        response = st.write_stream(response_generator(
-            urls=urls,
-            doc_type=doc_type,
-            session_messages=st.session_state.messages,
-            file_filter=file_filter
-        ))
+        with st.spinner("Thinking..."):
+            llm_response = response_generator(
+                urls=urls,
+                doc_type=doc_type,
+                session_messages=st.session_state.messages,
+                file_filter=file_filter
+            )
+            response = st.write_stream(llm_response)
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant",
                                       "content": response})
