@@ -1,7 +1,9 @@
 # streamlit-llm-chatbot
 A simple chatbot using Groq backed LLM using Retrieval Augmented Generation (RAG) with Langchain. 
 
-<div style="position: relative; padding-bottom: 53.645833333333336%; height: 0;"><iframe src="https://www.loom.com/embed/e8d4c852300d46678484d22b9debb49a?sid=83880706-978c-48cb-bfb4-d02343bdcacd" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe></div>
+[<img src="https://cdn.loom.com/sessions/thumbnails/e8d4c852300d46678484d22b9debb49a-with-play.gif" width="600" height="300"
+/>](https://www.loom.com/share/e8d4c852300d46678484d22b9debb49a)
+
 
 It is a streamlit app that lets you make retrieval augmented generation from a web source using LLM and [LangChain](https://github.com/langchain-ai/langchain). It is supported by [Groq](https://groq.com/) API to make the LLM inference.(It is free for personal use with limits, highly recommended to try it out!)
 
