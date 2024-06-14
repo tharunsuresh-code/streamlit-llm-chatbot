@@ -16,6 +16,8 @@ st.title("RagyBot - A RAG based chatbot")
 backend_LLM = LLAMA3_70B
 file_filter = None
 GROQ_API_KEY = None
+uploaded_file = None
+external_url_source = None
 
 
 def setup_groq_with_backend():
@@ -29,17 +31,26 @@ st.sidebar.text("❤️ Built with love by Tharun Suresh")
 
 GROQ_API_KEY = st.sidebar.text_input('Groq API Key',
                                      type='password')
-backend_LLM = st.sidebar.selectbox("LLM", 
-                                   options=(LLAMA3_70B, LLAMA3_8B, GEMMA_7B_IT),
+backend_LLM = st.sidebar.selectbox("LLM",
+                                   options=(LLAMA3_70B, LLAMA3_8B,
+                                            GEMMA_7B_IT),
                                    on_change=setup_groq_with_backend())
-doc_type = st.sidebar.selectbox("Doc Type", options=("general", "git"))
-external_url_source = st.sidebar.text_input('Enter External Source URL:',
-                                            placeholder='<URL>')
+doc_type = st.sidebar.selectbox("Doc Type", options=("general", "git", "pdf"))
+
+if doc_type != "pdf":
+    external_url_source = st.sidebar.text_input('Enter External Source URL:',
+                                                placeholder='<URL>')
 
 
 # Streamed response emulator
-def response_generator(urls, session_messages, doc_type, file_filter):
-    response = groq_chat_completion(urls, session_messages, doc_type, file_filter)
+def response_generator(urls,
+                       session_messages,
+                       doc_type,
+                       file_filter=file_filter,
+                       uploaded_file=uploaded_file):
+    response = groq_chat_completion(urls, session_messages, doc_type,
+                                    file_filter=file_filter,
+                                    uploaded_file=uploaded_file)
     for word in response.split():
         yield word + " "
         time.sleep(0.05)
@@ -65,6 +76,8 @@ if doc_type == "git":
     if not file_filter:
         st.sidebar.text('Note: Please filter files to speed \nthe context!')
 
+if doc_type == "pdf":
+    uploaded_file = st.sidebar.file_uploader("Choose a PDF file")
 
 # Display chat messages from history on app rerun
 for message in st.session_state.messages:
@@ -78,8 +91,8 @@ if prompt := st.chat_input("What is up?"):
         with st.chat_message("user"):
             st.markdown(prompt)
         # Add user message to chat history
-        st.session_state.messages.append({"role": "user", 
-                                        "content": prompt})
+        st.session_state.messages.append({"role": "user",
+                                          "content": prompt})
 
         urls = []
         if external_url_source:
@@ -90,12 +103,13 @@ if prompt := st.chat_input("What is up?"):
                 urls=urls,
                 doc_type=doc_type,
                 session_messages=st.session_state.messages,
-                file_filter=file_filter
+                file_filter=file_filter,
+                uploaded_file=uploaded_file
             )
             response = assistant_message.write_stream(llm_response)
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant",
-                                        "content": response})
+                                          "content": response})
         external_url_source = ""
     else:
         st.toast("Please enter your Groq API key!", icon='❗')

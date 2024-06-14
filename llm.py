@@ -4,7 +4,7 @@ from groq import Groq
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import WebBaseLoader, GitLoader
+from langchain_community.document_loaders import WebBaseLoader, GitLoader, PyPDFLoader, PyMuPDFLoader
 from langchain.chains import (
     create_history_aware_retriever,
     create_retrieval_chain
@@ -29,15 +29,18 @@ vectorStoreRetriever = None
 
 def setup_groq_client(groq_api_key, model_name=DEFAULT_MODEL):
     global groq_client
-    groq_client = ChatGroq(temperature=0,
+    groq_client = ChatGroq(temperature=0.25,
                            model_name=model_name,
                            groq_api_key=groq_api_key)
+    return groq_client
 
 
 def load_split_vector(urls: List[str],
                       doc_type="general",
-                      file_filter=""):
+                      file_filter="",
+                      uploaded_file=None):
     global prev_git_urls, hf_embeddings, vectorStoreRetriever
+    top_k = 10
     # Step 1: Load the document from a web url
     if doc_type == "git":
         if os.path.isdir("temp_path") and prev_git_urls[0] != urls[0]:
@@ -46,21 +49,34 @@ def load_split_vector(urls: List[str],
         loader = GitLoader(clone_url=urls[0],
                            repo_path="temp_path",
                            file_filter=lambda file_path: file_filter in file_path)
-        top_k = 20
+    elif doc_type == "pdf":
+        if type(uploaded_file) is str:
+            loader = PyPDFLoader(uploaded_file)
+        else:
+            if os.path.isdir("temp_path"):
+                shutil.rmtree('temp_path')
+            os.mkdir("temp_path")
+            with open("temp_path/temp.pdf", "wb") as temp_file:
+                temp_file.write(uploaded_file.getvalue())
+            loader = PyMuPDFLoader("temp_path/temp.pdf")  # PyPDFLoader("temp_path/temp.pdf", extract_images=True)
+        top_k = 5
     else:
         if prev_git_urls != urls:
             loader = WebBaseLoader(urls)
             prev_git_urls = urls
-            top_k = 20
+            top_k = 10
         else:
             return vectorStoreRetriever
     
     documents = loader.load()
 
-    # Step 2: Split the document into chunks with a specified chunk size
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500,
-                                                   chunk_overlap=50)
-    all_splits = text_splitter.split_documents(documents)
+    if doc_type == "pdf":
+        all_splits = loader.load_and_split()
+    else:
+        # Step 2: Split the document into chunks with a specified chunk size
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500,
+                                                       chunk_overlap=50)
+        all_splits = text_splitter.split_documents(documents)
 
     # Step 3: Store the document into a vector store with a specific embedding model
     if not hf_embeddings:
@@ -96,8 +112,9 @@ def generate_llm_response(chat_history,
 
         # Answer question
         qa_system_prompt = (
-            "You are an assistant for question-answering tasks. Use "
-            "the following pieces of retrieved context/document to answer the "
+            "You are an assistant named RagyBot and designed for"
+            "question-answering tasks. Use the following pieces"
+            "of retrieved context/document to answer the"
             "question. If you don't know the answer, just say that you "
             "don't know."
             "{context}"
@@ -127,10 +144,14 @@ def generate_llm_response(chat_history,
 def groq_chat_completion(urls: List[str],
                          session_messages: List[tuple],
                          doc_type: str = "general",
-                         file_filter=""):
+                         file_filter="",
+                         uploaded_file=None):
     chat_history = session_messages
-    if len(urls) > 0:
-        vectorStoreRetriever = load_split_vector(urls, doc_type, file_filter)
+    if len(urls) > 0 or doc_type == "pdf":
+        vectorStoreRetriever = load_split_vector(urls,
+                                                 doc_type,
+                                                 file_filter,
+                                                 uploaded_file)
         response = generate_llm_response(chat_history,
                                          True,
                                          vectorStoreRetriever)
