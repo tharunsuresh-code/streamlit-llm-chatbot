@@ -23,20 +23,10 @@ pip install -r requirements.txt
 ```
 
 ## Run
-To run the app on streamlit, use the following command:
+To test the app against the Churchill insurance document:
 ```
-streamlit run main.py
+python test.py
 ```
-The application will automatically open in your default browser. You can check the logs in the terminal you spun the streamlit server.
-
-## LLMs and embeddings supported
-The available **LLM backends** as supported by Groq are as follows:
-
-- Llama3: "llama3-70b-8192" - Enabled by default
-- Llama3: "llama3-8b-8192"
-- Gemma: "gemma-7b-it"
-
-**Embeddings**: Supports Hugging Face Embeddings by default, which is now hardcoded to "sentence-transformers/all-mpnet-base-v2". Can be dynamic in the future.
 
 ## Credits
 A big shoutout to all the detailed documentations from [Langchain](https://python.langchain.com/docs/get_started/introduction) and [Streamlit](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps) to help build the app. [Groq](https://groq.com/) has been generous with their rate limits for the LLMs which enabled the development of the app. Thanks to [pip-chill](https://github.com/rbanffy/pip-chill) for a chill pip freeze. Used [Loom](https://www.loom.com/) for the demo video of the app.
