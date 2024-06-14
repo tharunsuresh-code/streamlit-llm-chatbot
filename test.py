@@ -7,7 +7,8 @@ from langchain.evaluation import load_evaluator
 
 if __name__ == '__main__':
     df = pd.read_csv('car_insurance_queries.csv')
-    groq_client = setup_groq_client('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')
+    GROQ_API_KEY = ""
+    groq_client = setup_groq_client(GROQ_API_KEY)
 
     hf_embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
     hf_evaluator = load_evaluator("embedding_distance", embeddings=hf_embeddings)
